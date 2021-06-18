@@ -12,6 +12,7 @@ for f in *; do
 	case $f in
 	*.png) suffix=png;;
 	*.jpg) suffix=jpg;;
+	*.jpeg) suffix=jpeg;;
 	esac
 done
 
