@@ -7,6 +7,6 @@ make
 make install
 ```
 
-usage: labp <dir>
+usage: labp \<dir\>
 
 create a html file in destination directory, open the html file to do editing.
