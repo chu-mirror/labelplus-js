@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Labelplus-JS</title>
+        <style>
+            #labelplus-box {
+                width: 1000px;
+                height: 700px;
+                background-color: cadetblue;
+                float: left;
+            }
+            #tips-box {
+                float: left;
+                width: 300px;
+                margin-left: 50px;
+            }
+            #viewer {
+                width: 400px;
+                height: 600px;
+                float: left;
+                background-color: chartreuse;
+                margin-top: 50px;
+                margin-left: 75px;
+
+            }
+            
+            #text-box {
+                width: 400px;
+                height: 380px;
+                background-color: white;
+                float: left;
+                margin-top: 50px;
+                margin-left: 50px;
+                margin-bottom: 20px;
+                overflow: auto;
+            }
+
+            #text-list {
+                list-style-position: outside;
+            }
+
+            
+            .stressed {
+                background-color: grey;
+            }
+            #input-box {
+                width: 400px;
+                height: 200px;
+                background-color: coral;
+                float: left;
+                margin-left: 50px;
+            }
+            #input-area {
+                width: 400px;
+                height: 200px;
+                font-family: sans-serif;
+            }
+
+            #header {
+                margin-top: 50px;
+                margin-left: 50px;
+            }
+        </style>
+        <script>
+            function initialize()
+            {
+                viewer.font = '24px sans';
+                viewer.fillStyle = 'red';
+                viewer.textBaseline = 'top';
+                load_images();
+                print();
+
+                document.onkeydown = keydown_handler;
+                document.getElementById('viewer').addEventListener(
+                    'click',
+                    function(e) {
+                        add_pos(e);
+                        print();
+                    },
+                    false
+                )
+
+                document.getElementById("input-area").focus();
+            }
+
+            function load_images()
+            {
+                for (i in labeledtext.pages) {
+                    let src =  labeledtext.pages[i].source;
+                    let img = new Image();
+                    img.src = src;
+                    images[i] = img
+                }
+                images[cur_status.page_no].onload = function () {
+                    print();
+                }
+            }
+
+            function print()
+            {
+                print_image();
+                refresh_text_box();
+                refresh_input_area();
+            }
+
+            function print_image()
+            {
+                viewer.drawImage(images[cur_status.page_no], 0, 0, 400, 600);
+                print_label();
+            }
+
+            function print_label()
+            {
+                var tsl;
+                
+                for (i in labeledtext.pages[cur_status.page_no].translation) {
+                    let tsl = labeledtext.pages[cur_status.page_no].translation[i]
+                    let x = Math.round(tsl.place_x * 400)
+                    let y = Math.round(tsl.place_y * 600)
+                    viewer.fillText(parseInt(i)+1+"", x, y);
+                }
+            }
+
+            function refresh_text_box()
+            {
+                var text_list = '<ol id = "text-list">'
+                for (i in labeledtext.pages[cur_status.page_no].translation) {
+                    let text = labeledtext.pages[cur_status.page_no].translation[i].text
+                    if (i == cur_status.tsl_no) {
+                        text_list = text_list + '<li class = "stressed">' + text + '</li>';
+                    } else {
+                        text_list = text_list + '<li>' + text + '</li>';
+                    }
+                }
+                text_list = text_list + '</ol>';
+
+                document.getElementById("text-box").innerHTML = text_list;
+            }
+
+            function refresh_input_area()
+            {
+                if (labeledtext.pages[cur_status.page_no].translation.length == 0) {
+                    document.getElementById("input-area").value = "";
+                    return;
+                }
+                let text = labeledtext.pages[cur_status.page_no].translation[cur_status.tsl_no].text
+                document.getElementById("input-area").value = text;
+            }
+
+            function save_input_area()
+            {
+                if (labeledtext.pages[cur_status.page_no].translation.length == 0) return;
+                let text = document.getElementById("input-area").value
+                labeledtext.pages[cur_status.page_no].translation[cur_status.tsl_no].text = text;
+                refresh_text_box();
+            }
+
+            function add_pos(e)
+            {
+                let viewer_rect = document.getElementById('viewer').getBoundingClientRect()
+                let trs = labeledtext.pages[cur_status.page_no].translation
+                trs.push({
+                    place_x: (e.clientX - viewer_rect.left)/400.0,
+                    place_y: (e.clientY - viewer_rect.top)/600.0,
+                    text: ""
+                })
+            }
+
+
+            function move_downward()
+            {
+                save_input_area();
+                if (cur_status.tsl_no+1 < labeledtext.pages[cur_status.page_no].translation.length) {
+                    cur_status.tsl_no++;
+                }
+                print();
+            }
+
+            function move_upward()
+            {
+                save_input_area();
+                if (cur_status.tsl_no > 0) {
+                    cur_status.tsl_no--;
+                }
+                print();
+            }
+
+            function delete_text()
+            {
+                let trs = labeledtext.pages[cur_status.page_no].translation
+                trs.splice(cur_status.tsl_no, 1)
+                if (cur_status.tsl_no > 0) cur_status.tsl_no--;
+                print();
+            }
+
+            function move_forward()
+            {
+                save_input_area();
+                if (cur_status.page_no+1 < labeledtext.pages.length) {
+                    cur_status.page_no++;
+                }
+                cur_status.tsl_no = 0;
+                print();
+            }
+
+            function move_backward()
+            {
+                save_input_area();
+                if (cur_status.page_no > 0) {
+                    cur_status.page_no--;
+                }
+                cur_status.tsl_no = 0;
+                print();
+            }
+
+            function toLabelplus()
+            {
+                var text = "1,0\n-\n框内\n框外\n-\n\n"
+
+                for (i in labeledtext.pages) {
+                    text = text + ">>>>>>>>[" + labeledtext.pages[i].source + "]<<<<<<<<\n";
+                    for (j in labeledtext.pages[i].translation) {
+                        let tr = labeledtext.pages[i].translation[j]
+                        text = text + "----------------[" + (parseInt(j)+1) + "]----------------";
+                        text = text + "[" + tr.place_x.toFixed(3) + "," + tr.place_y.toFixed(3) + ",1]\n";
+                        text = text + tr.text + "\n\n";
+                    }
+                    text = text + "\n";
+                }
+
+                return text;
+            }
+
+            function download()
+            {
+                save_input_area();
+                var data = "data:text/plain;charset=utf-8," + encodeURIComponent(toLabelplus());
+                var dl = document.getElementById('download');
+                dl.setAttribute("href", data);
+                dl.setAttribute("download", "translation.txt");
+                dl.click();
+            }
+
+            function keydown_handler(e)
+            {
+                if (!e.ctrlKey || !e.altKey) return;
+                switch (e.code) {
+                    case 'KeyJ':
+                        move_downward();
+                        break;
+                    case 'KeyK':
+                        move_upward();
+                        break;
+                    case 'KeyF':
+                        move_forward();
+                        break;
+                    case 'KeyB':
+                        move_backward();
+                        break;
+                    case 'KeyS':
+                        download();
+                        break;
+                    case 'KeyD':
+                        delete_text();
+                        break;
+                    default:
+                        break;
+                }
+            }
+                        
+        </script>
+    </head>
+    <body>
+        <div id="header">
+            <h1 id="title-header">Labelplus-JS</h1>
+        </div>
+        <div id="labelplus-box">
+            <div id="viewer"><canvas id="viewer-canvas" width="400" height="600"></canvas></div>
+            <div id="text-box"></div>
+            <div id="input-box"><textarea id="input-area"></textarea></div>
+        </div>
+        <div id="tips-box">
+            <h3>简介</h3>
+            <p>
+                为了方便非windows用户的漫画译者，打算把Labelplus移植成Web App。日后若是有精力，会
+                写一个相应的后端。目前只能手动调用脚本生成对应的html页面，Unix用户可以参考我的m4脚本。
+                <a href="https://www.github.com/chu-mirror">github</a>
+            </p>
+            <h3>使用说明</h3>
+            <p>左键单击图片，在该位置打下标记，然后用快捷键移动到想编辑的地方。</p>
+            <h3>快捷键</h3>
+            <p>需要同时按住Ctrl和Alt激活快捷键</p>
+            <ul>
+                <li>j 下一条翻译</li>
+                <li>k 上一条翻译</li>
+                <li>f 下一页</li>
+                <li>b 上一页</li>
+                <li>s 保存当前翻译</li>
+                <li>d 删除当前条目</li>
+            </ul>
+        </div>
+        <a id="download" style="display:none"></a>
+        <script>
+            var viewer = document.getElementById("viewer-canvas").getContext("2d");
+            var labeledtext = NEW_TRANSLATION
+            var cur_status = {
+                page_no: 1,
+                tsl_no: 0
+            }
+            var images = [];
+            initialize();
+        </script>
+    </body>
+</html>
